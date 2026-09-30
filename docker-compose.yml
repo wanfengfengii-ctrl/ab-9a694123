@@ -1,0 +1,30 @@
+name: cable-strain-inversion
+
+services:
+  api:
+    build: .
+    image: cable-strain-inversion:latest
+    ports:
+      # 宿主机端口可通过环境变量 API_HOST_PORT 配置，默认 8000
+      - "${API_HOST_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; r=urllib.request.urlopen('http://localhost:8000/health',timeout=2); sys.exit(0 if r.status==200 else 1)"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  verify:
+    build: .
+    image: cable-strain-inversion:latest
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_BASE_URL: http://api:8000
+    command: ["python", "verify.py"]
+    restart: "no"
